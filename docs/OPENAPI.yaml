@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: MediCore API
+  version: 1.0.0
+  description: Synthetic-data educational hospital operations API.
+servers:
+  - url: http://localhost:4000/api/v1
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate a demo user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email}
+                password: {type: string, minLength: 8}
+      responses:
+        '200': {description: Access and refresh tokens}
+        '401': {description: Invalid credentials}
+  /patients:
+    get:
+      security: [{bearerAuth: []}]
+      summary: Paginated patient listing for authorized staff
+      responses:
+        '200': {description: Patient page}
+        '403': {description: Forbidden}
+    post:
+      security: [{bearerAuth: []}]
+      summary: Register a synthetic patient
+      responses:
+        '201': {description: Created}
+        '400': {description: Validation error}
+  /appointments:
+    get:
+      security: [{bearerAuth: []}]
+      summary: List appointments in caller scope
+      responses:
+        '200': {description: Appointment list}
+    post:
+      security: [{bearerAuth: []}]
+      summary: Book an appointment with overlap check
+      responses:
+        '201': {description: Appointment booked}
+        '409': {description: Provider schedule conflict}
+  /appointments/{id}/cancel:
+    patch:
+      security: [{bearerAuth: []}]
+      summary: Cancel an appointment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200': {description: Cancelled}
+  /encounters:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Open a clinical encounter
+      responses:
+        '201': {description: Created}
+  /diagnoses:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Add clinician diagnosis code to encounter
+      responses:
+        '201': {description: Created}
+  /prescriptions:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Create prescription order
+      responses:
+        '201': {description: Created}
+  /lab-orders:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Create lab order
+      responses:
+        '201': {description: Created}
+  /lab-orders/{id}/results:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Record lab result
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '201': {description: Result recorded}
+  /invoices:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Create synthetic invoice in minor currency units
+      responses:
+        '201': {description: Created}
+  /consents:
+    post:
+      security: [{bearerAuth: []}]
+      summary: Record consent decision and version
+      responses:
+        '201': {description: Created}
+  /audit-logs:
+    get:
+      security: [{bearerAuth: []}]
+      summary: List audit events for administrators
+      responses:
+        '200': {description: Audit log list}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

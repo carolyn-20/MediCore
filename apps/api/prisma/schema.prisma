@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  RECEPTIONIST
+  DOCTOR
+  NURSE
+  LAB_TECH
+  BILLING
+  ADMIN
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum Sex {
+  FEMALE
+  MALE
+  OTHER
+  UNDISCLOSED
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  passwordHash String
+  role         Role
+  patient      Patient?
+  createdAt    DateTime   @default(now())
+  auditLogs    AuditLog[]
+}
+
+model Patient {
+  id          String        @id @default(uuid()) @db.Uuid
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  sex         Sex           @default(UNDISCLOSED)
+  email       String?
+  phone       String?
+  createdAt   DateTime      @default(now())
+  userId      String?       @unique @db.Uuid
+  user        User?         @relation(fields: [userId], references: [id])
+  appointments Appointment[]
+  encounters  Encounter[]
+  prescriptions Prescription[]
+  labOrders   LabOrder[]
+  invoices    Invoice[]
+  consents    Consent[]
+}
+
+model Department {
+  id          String      @id @default(uuid()) @db.Uuid
+  name        String      @unique
+  description String?
+  providers   Provider[]
+  appointments Appointment[]
+}
+
+model Provider {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @unique @db.Uuid
+  name         String
+  specialty    String
+  departmentId String        @db.Uuid
+  department   Department    @relation(fields: [departmentId], references: [id])
+  appointments Appointment[]
+  encounters   Encounter[]
+}
+
+model Appointment {
+  id           String            @id @default(uuid()) @db.Uuid
+  patientId    String            @db.Uuid
+  patient      Patient           @relation(fields: [patientId], references: [id])
+  providerId   String            @db.Uuid
+  provider     Provider          @relation(fields: [providerId], references: [id])
+  departmentId String?           @db.Uuid
+  department   Department?       @relation(fields: [departmentId], references: [id])
+  startsAt     DateTime
+  endsAt       DateTime
+  status       AppointmentStatus @default(BOOKED)
+  reason       String
+  createdAt    DateTime          @default(now())
+
+  @@index([providerId, startsAt, endsAt])
+  @@index([patientId, startsAt])
+}
+
+model Encounter {
+  id            String        @id @default(uuid()) @db.Uuid
+  patientId     String        @db.Uuid
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  providerId    String        @db.Uuid
+  provider      Provider      @relation(fields: [providerId], references: [id])
+  appointmentId String?       @db.Uuid
+  notes         String?
+  status        String        @default("OPEN")
+  createdAt     DateTime      @default(now())
+  diagnoses     Diagnosis[]
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
+}
+
+model Diagnosis {
+  id         String   @id @default(uuid()) @db.Uuid
+  encounterId String  @db.Uuid
+  encounter  Encounter @relation(fields: [encounterId], references: [id])
+  code       String
+  description String
+  createdAt  DateTime @default(now())
+}
+
+model Prescription {
+  id             String    @id @default(uuid()) @db.Uuid
+  encounterId    String    @db.Uuid
+  encounter      Encounter @relation(fields: [encounterId], references: [id])
+  patientId      String    @db.Uuid
+  patient        Patient   @relation(fields: [patientId], references: [id])
+  medicationName String
+  dose           String
+  frequency      String
+  instructions   String?
+  createdAt      DateTime  @default(now())
+}
+
+model LabOrder {
+  id         String      @id @default(uuid()) @db.Uuid
+  patientId  String      @db.Uuid
+  patient    Patient     @relation(fields: [patientId], references: [id])
+  encounterId String     @db.Uuid
+  encounter  Encounter   @relation(fields: [encounterId], references: [id])
+  testCode   String
+  testName   String
+  status     String      @default("ORDERED")
+  createdAt  DateTime    @default(now())
+  results    LabResult[]
+}
+
+model LabResult {
+  id            String   @id @default(uuid()) @db.Uuid
+  labOrderId    String   @db.Uuid
+  labOrder      LabOrder @relation(fields: [labOrderId], references: [id])
+  value         String
+  unit          String
+  referenceRange String?
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model Invoice {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String   @db.Uuid
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  encounterId String?  @db.Uuid
+  amountCents Int
+  currency    String   @default("INR")
+  status      String   @default("UNPAID")
+  createdAt   DateTime @default(now())
+}
+
+model Consent {
+  id        String   @id @default(uuid()) @db.Uuid
+  patientId String   @db.Uuid
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  purpose   String
+  granted   Boolean
+  version   String
+  createdAt DateTime @default(now())
+
+  @@index([patientId, purpose, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @db.Uuid
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  requestId  String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+}

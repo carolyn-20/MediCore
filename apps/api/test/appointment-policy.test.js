@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {overlaps,validateAppointmentWindow} from '../src/services/appointment-policy.js';
+test('adjacent appointments do not overlap',()=>{assert.equal(overlaps({startsAt:'2026-11-23T10:00:00Z',endsAt:'2026-11-23T10:30:00Z'},{startsAt:'2026-11-23T10:30:00Z',endsAt:'2026-11-23T11:00:00Z'}),false)});
+test('invalid or reversed appointment windows are rejected',()=>{assert.equal(validateAppointmentWindow('2026-11-23T11:00:00Z','2026-11-23T10:00:00Z'),false);assert.equal(validateAppointmentWindow('bad','2026-11-23T10:00:00Z'),false)});

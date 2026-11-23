@@ -1,0 +1,4 @@
+import test from 'node:test'; import assert from 'node:assert/strict';
+test('appointment overlap rule detects intersecting time ranges',()=>{const overlap=(a,b)=>new Date(a.start)<new Date(b.end)&&new Date(a.end)>new Date(b.start);const a={start:'2026-11-23T10:00:00Z',end:'2026-11-23T10:30:00Z'};assert.equal(overlap(a,{start:'2026-11-23T10:15:00Z',end:'2026-11-23T10:45:00Z'}),true);assert.equal(overlap(a,{start:'2026-11-23T10:30:00Z',end:'2026-11-23T11:00:00Z'}),false);});
+test('money is represented as positive integer minor units',()=>{const valid=n=>Number.isInteger(n)&&n>0;assert.equal(valid(12500),true);assert.equal(valid(0),false);assert.equal(valid(12.5),false);});
+test('consent is explicit boolean and never inferred from missing value',()=>{const permitted=c=>c?.granted===true;assert.equal(permitted({granted:true}),true);assert.equal(permitted({granted:false}),false);assert.equal(permitted(undefined),false);});

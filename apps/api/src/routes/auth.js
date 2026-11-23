@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { z } from 'zod';
+import { prisma } from '../lib/prisma.js';
+import { HttpError, asyncHandler } from '../lib/errors.js';
+const router=Router();
+const loginSchema=z.object({email:z.string().email(),password:z.string().min(8)});
+router.post('/login',asyncHandler(async(req,res)=>{ const v=loginSchema.safeParse(req.body); if(!v.success) throw new HttpError(400,'Valid email and password are required','VALIDATION_ERROR'); const user=await prisma.user.findUnique({where:{email:v.data.email},include:{patient:true}}); if(!user || !await bcrypt.compare(v.data.password,user.passwordHash)) throw new HttpError(401,'Email or password is incorrect','INVALID_CREDENTIALS'); const claims={sub:user.id,role:user.role,patientId:user.patient?.id}; const accessToken=jwt.sign(claims,process.env.JWT_SECRET,{expiresIn:process.env.ACCESS_TOKEN_TTL||'15m'}); const refreshToken=jwt.sign({...claims,type:'refresh'},process.env.JWT_REFRESH_SECRET,{expiresIn:process.env.REFRESH_TOKEN_TTL||'7d'}); res.json({accessToken,refreshToken,user:{id:user.id,email:user.email,role:user.role}}); }));
+router.post('/refresh',asyncHandler(async(req,res)=>{try{const p=jwt.verify(req.body.refreshToken,process.env.JWT_REFRESH_SECRET);if(p.type!=='refresh')throw Error();const accessToken=jwt.sign({sub:p.sub,role:p.role,patientId:p.patientId},process.env.JWT_SECRET,{expiresIn:'15m'});res.json({accessToken});}catch{throw new HttpError(401,'Refresh token invalid or expired','INVALID_REFRESH_TOKEN');}}));
+export default router;
